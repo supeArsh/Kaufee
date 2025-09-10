@@ -1,4 +1,5 @@
-Coffee House Management System
+Coffee House Management System☕
+
 A comprehensive, web-based management system for a coffee house, built with Python, Flask, and SQLAlchemy. This application provides role-based access for administrators, managers, and staff to manage orders, menu items, staff, and view sales analytics.
 
 ✨ Features
@@ -31,7 +32,7 @@ A database like PostgreSQL or you can use SQLite for local development by changi
 Installation & Setup
 Clone the Repository:
 
-git clone [https://github.com/your-username/coffee-house-management.git](https://github.com/your-username/coffee-house-management.git)
+git clone [https://github.com/Anshika12345/coffeehouse-management-system](https://github.com/Anshika12345/coffeehouse-management-system)
 cd coffee-house-management
 
 Create a Virtual Environment:
