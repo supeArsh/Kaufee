@@ -1,0 +1,171 @@
+body {
+    background: url('https://images.unsplash.com/photo-1509785307050-d4066910ec1e?auto=format&fit=crop&q=80&w=1920') no-repeat center center fixed;
+    background-size: cover;
+}
+
+.card {
+    background-color: rgba(60, 47, 47, 0.85); /* Card background color */
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(60, 47, 47, 0.4) !important; /* Card border color */
+}
+
+.navbar {
+    background-color: rgba(60, 47, 47, 0.85) !important; /* Navbar color */
+    backdrop-filter: blur(8px);
+}
+
+.text-muted, .text-primary {
+    color: rgba(255, 228, 196, 0.9) !important; /* Changed to a lighter beige color */
+}
+
+.nav-link {
+    color: rgba(255, 228, 196, 1) !important; /* Changed to a lighter beige color */
+}
+
+.nav-link.active {
+    color: rgba(255, 228, 196, 1) !important; /* Changed to a lighter beige color */
+}
+
+.btn-primary {
+    background-color: rgba(60, 47, 47, 0.9) !important; /* Primary button color */
+    border-color: rgba(60, 47, 47, 0.9) !important; /* Border color for buttons */
+}
+
+.btn-primary:hover {
+    background-color: rgba(50, 40, 40, 0.9) !important; /* Hover state for buttons */
+    border-color: rgba(50, 40, 40, 0.9) !important; /* Border color on hover */
+}
+
+.chart-container canvas {
+    background-color: rgba(60, 47, 47, 0.7); /* Chart background color */
+}
+
+/* Custom styles for Coffeehouse Management System */
+
+.icon-shape {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 3rem;
+    width: 3rem;
+    font-size: 1.5rem;
+}
+
+.card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.table th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(255, 228, 196, 0.1); /* Light hover effect */
+}
+
+.badge {
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+}
+
+.form-control:focus,
+.form-select:focus {
+    box-shadow: 0 0 0 0.2rem rgba(255, 228, 196, 0.25); /* Lighter focus color */
+}
+
+.login-container {
+    max-width: 450px;
+    margin: 0 auto;
+}
+
+.btn-primary {
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.section-title {
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+}
+
+.chart-container {
+    position: relative;
+    margin: auto;
+}
+
+@media (max-width: 768px) {
+    h1 {
+        font-size: 1.8rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    .section-title {
+        font-size: 1.3rem;
+    }
+}
+
+.bg-primary {
+    background-color: rgba(60, 47, 47, 0.9) !important; /* Background color */
+}
+
+.btn-outline-primary {
+    color: rgba(255, 228, 196, 0.8); /* Changed to a lighter beige color */
+    border-color: rgba(255, 228, 196, 0.8); /* Changed to a lighter beige color */
+}
+
+.btn-outline-primary:hover {
+    background-color: rgba(255, 228, 196, 0.75); /* Changed to a lighter beige color */
+    border-color: rgba(255, 228, 196, 0.75); /* Changed to a lighter beige color */
+}
+
+.order-list,
+.staff-list {
+    color: rgba(255, 228, 196, 1) !important; /* Changed to a lighter beige color */
+}
+
+.copyright {
+    color: rgba(255, 228, 196, 0.9) !important; /* Changed to a lighter beige color */
+}
+
+@media (max-width: 991.98px) {
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: -300px;
+        height: 100vh;
+        width: 280px;
+        z-index: 1050;
+        transition: left 0.3s ease;
+        background-color: rgba(60, 47, 47, 0.85); /* Sidebar color */
+        overflow-y: auto;
+    }
+
+    .sidebar.show {
+        left: 0;
+    }
+}
+/* ... Existing CSS content ... */
+
+.order-list tbody tr {
+    background-color: rgba(60, 47, 47, 0.7) !important; /* Change to espresso brown for order list background */
+}
+
+.staff-list tbody tr {
+    background-color: rgba(60, 47, 47, 0.7) !important; /* Change to espresso brown for staff list background */
+}
+
+.order-list, .staff-list {
+    background-color: rgba(60, 47, 47, 0.85) !important; /* Change to espresso brown for entire lists */
+    color: rgba(255, 228, 196, 1) !important; /* Text color to lighter beige */
+}
+
+/* Rest of your existing CSS */

@@ -1,0 +1,44 @@
+Environments
+.env
+.venv
+venv/
+env/
+ENV/
+
+Python cache
+pycache/
+*.py[cod]
+*$py.class
+
+Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+SQLite databases
+*.sqlite3
+*.db
+
+IDE / Editor specific
+.vscode/
+.idea/
+*.swp
+*.swo
+
+System files
+.DS_Store
+Thumbs.db
