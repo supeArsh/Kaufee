@@ -1,8 +1,8 @@
-Coffee House Management System☕
+# Coffee House Management System☕
 
 A comprehensive, web-based management system for a coffee house, built with Python, Flask, and SQLAlchemy. This application provides role-based access for administrators, managers, and staff to manage orders, menu items, staff, and view sales analytics.
 
-✨ Features
+# ✨ Features
 Role-Based Access Control:
 
 Admin: Full system access. Can manage staff, menu, and orders.
@@ -21,15 +21,15 @@ Staff Management: Add new staff members, update their details (position, contact
 
 Responsive UI: A clean and modern user interface that works seamlessly across desktops, tablets, and mobile devices.
 
-🚀 Getting Started
+# 🚀 Getting Started
 Follow these instructions to get a local copy of the project up and running.
 
-Prerequisites
+## Prerequisites
 Python 3.11+
 
 A database like PostgreSQL or you can use SQLite for local development by changing the config.
 
-Installation & Setup
+## Installation & Setup
 Clone the Repository:
 
 git clone [https://github.com/Anshika12345/coffeehouse-management-system](https://github.com/Anshika12345/coffeehouse-management-system)
@@ -37,43 +37,43 @@ cd coffee-house-management
 
 Create a Virtual Environment:
 
-# For macOS/Linux
+### For macOS/Linux
 python3 -m venv venv
 source venv/bin/activate
 
-# For Windows
+### For Windows
 py -m venv venv
 venv\Scripts\activate
 
-Install Dependencies:
+### Install Dependencies:
 
 pip install -r requirements.txt
 
-Configure Environment Variables:
+### Configure Environment Variables:
 Create a .env file in the root directory. For local development, you can use SQLite.
 
-For SQLite (simple setup):
+## For SQLite (simple setup):
 
-# A strong, random secret key for session management
+### A strong, random secret key for session management
 SESSION_SECRET="your_strong_secret_key"
-# Database URL for SQLite
+### Database URL for SQLite
 DATABASE_URL="sqlite:///coffeehouse.db"
 
-For PostgreSQL (production setup):
+## For PostgreSQL (production setup):
 
-# A strong, random secret key for session management
+### A strong, random secret key for session management
 SESSION_SECRET="your_strong_secret_key"
-# Your PostgreSQL database connection string
-# Format: postgresql://[user]:[password]@[host]:[port]/[dbname]
+### Your PostgreSQL database connection string
+### Format: postgresql://[user]:[password]@[host]:[port]/[dbname]
 DATABASE_URL="postgresql://user:password@localhost:5432/coffee_db"
 
-Run the Application:
+## Run the Application:
 
 flask run
 
 The application will be available at http://127.0.0.1:5000.
 
-📋 Usage
+# 📋 Usage
 Default Login Credentials:
 
 Admin: username: admin, password: admin123
@@ -86,7 +86,7 @@ Navigate through the sidebar to access different management pages based on your 
 
 The dashboard provides an at-a-glance view of the coffee house's performance.
 
-🛠️ Built With
+# 🛠️ Built With
 Flask - The web framework used.
 
 SQLAlchemy - The ORM for database interaction.
@@ -97,5 +97,5 @@ Flask-WTF - For form handling and validation.
 
 Chart.js - For creating interactive charts.
 
-📜 License
+# 📜 License
 This project is licensed under the MIT License - see the LICENSE file for details.
