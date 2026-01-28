@@ -32,8 +32,8 @@ A database like PostgreSQL or you can use SQLite for local development by changi
 ## Installation & Setup
 Clone the Repository:
 
-git clone [https://github.com/Anshika12345/coffeehouse-management-system](https://github.com/Anshika12345/coffeehouse-management-system)
-cd coffee-house-management
+git clone [https://github.com/supeArsh/Kaufee](https://github.com/supeArsh/Kaufee)
+cd Kaufee
 
 Create a Virtual Environment:
 
