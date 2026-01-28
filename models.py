@@ -1,8 +1,16 @@
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import DeclarativeBase
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import random
-from main import db
+
+# --- FIX: Define DB here to prevent circular imports ---
+class Base(DeclarativeBase):
+    pass
+
+db = SQLAlchemy(model_class=Base)
+# -----------------------------------------------------
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -27,8 +35,6 @@ class MenuItem(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
-
-
 class Staff(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     staff_id = db.Column(db.String(10), unique=True, nullable=False)
@@ -36,8 +42,6 @@ class Staff(db.Model):
     position = db.Column(db.String(50), nullable=False)
     contact = db.Column(db.String(50))
     active = db.Column(db.Boolean, default=True)
-    
-    # Relationships
     orders = db.relationship('Order', backref='staff_member', lazy=True)
     
     def __init__(self, **kwargs):
@@ -52,8 +56,6 @@ class Order(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.now)
     status = db.Column(db.String(20), default='Pending')
     total = db.Column(db.Float, default=0.0)
-    
-    # Relationships
     items = db.relationship('OrderItem', backref='order', lazy=True, cascade="all, delete-orphan")
 
 class OrderItem(db.Model):
@@ -61,6 +63,12 @@ class OrderItem(db.Model):
     order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
     menu_item_id = db.Column(db.Integer, db.ForeignKey('menu_item.id'), nullable=False)
     quantity = db.Column(db.Integer, default=1)
-    
-    # Relationship
     menu_item = db.relationship('MenuItem')
+
+class AuditLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    action = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=datetime.now)
+    user = db.relationship('User', backref='audit_logs')

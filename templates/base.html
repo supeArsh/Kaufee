@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coffeehouse Management System</title>
     <!-- Bootstrap CSS (Replit-themed) -->
-    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.0/dist/darkly/bootstrap.min.css">
     <!-- Chart.js for visualizations -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Font Awesome for icons -->
@@ -48,7 +48,19 @@
                             <i class="fas fa-users me-1"></i> Staff
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == url_for('reports') %}active{% endif %}" href="{{ url_for('reports') }}">
+                            <i class="fas fa-chart-bar me-1"></i> Reports
+                        </a>
+                    </li>
+                    {% endif %}
                     
+                    {% if current_user.role == 'admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == url_for('users') %}active{% endif %}" href="{{ url_for('users') }}">
+                            <i class="fas fa-user-cog me-1"></i> Users
+                        </a>
+                    </li>
                     {% endif %}
                 </ul>
                 <div class="d-flex">

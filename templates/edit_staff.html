@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>Edit Staff Member</h1>
+        <p class="text-muted">Update staff member details</p>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <form method="POST" class="needs-validation">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="staff_id" class="form-label">Staff ID</label>
+                    <input type="text" class="form-control" id="staff_id" name="staff_id" value="{{ staff.staff_id }}" readonly>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="name" class="form-label">Full Name</label>
+                    <input type="text" class="form-control" id="name" name="name" value="{{ staff.name }}" required>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="position" class="form-label">Position</label>
+                    <select class="form-select" id="position" name="position" required>
+                        <option value="barista" {% if staff.position == 'barista' %}selected{% endif %}>Barista</option>
+                        <option value="cashier" {% if staff.position == 'cashier' %}selected{% endif %}>Cashier</option>
+                        <option value="manager" {% if staff.position == 'manager' %}selected{% endif %}>Manager</option>
+                        <option value="chef" {% if staff.position == 'chef' %}selected{% endif %}>Chef</option>
+                        <option value="cleaner" {% if staff.position == 'cleaner' %}selected{% endif %}>Cleaner</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="contact" class="form-label">Contact Number</label>
+                    <input type="text" class="form-control" id="contact" name="contact" value="{{ staff.contact }}" required>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Status</label>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="active" name="active" 
+                           {% if staff.active %}checked{% endif %}>
+                    <label class="form-check-label" for="active">
+                        Active
+                    </label>
+                </div>
+            </div>
+            
+            <div class="d-flex gap-2 justify-content-end">
+                <a href="{{ url_for('staff') }}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

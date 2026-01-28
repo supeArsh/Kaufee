@@ -27,6 +27,33 @@ class MenuItemForm(FlaskForm):
     available = BooleanField('Available')
     submit = SubmitField('Add Menu Item')
 
+class InventoryForm(FlaskForm):
+    name = StringField('Item Name', validators=[DataRequired()])
+    category = SelectField('Category', choices=[
+        ('beans', 'Coffee Beans'),
+        ('milk', 'Milk'),
+        ('syrups', 'Syrups'),
+        ('tea', 'Tea'),
+        ('pastry', 'Pastry Ingredients'),
+        ('packaging', 'Packaging'),
+        ('other', 'Other')
+    ], validators=[DataRequired()])
+    quantity = FloatField('Quantity', validators=[DataRequired(), NumberRange(min=0)])
+    unit = StringField('Unit', validators=[DataRequired()])
+    reorder_level = FloatField('Reorder Level', validators=[DataRequired(), NumberRange(min=0)])
+    submit = SubmitField('Add Item')
+
+class UserForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired(), Length(min=3, max=64)])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
+    role = SelectField('Role', choices=[
+        ('staff', 'Staff'),
+        ('manager', 'Manager'),
+        ('admin', 'Admin')
+    ], validators=[DataRequired()])
+    submit = SubmitField('Create User')
+
 class StaffForm(FlaskForm):
     name = StringField('Full Name', validators=[DataRequired()])
     position = SelectField('Position', choices=[

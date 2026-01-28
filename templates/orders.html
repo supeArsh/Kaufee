@@ -14,8 +14,8 @@
 </div>
 
 <!-- Orders Table -->
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-transparent">
+<div class="card border-0 shadow-sm mb-4" style="overflow: visible;">
+    <div class="card-header bg-transparent" style="overflow: visible;">
         <div class="d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Orders</h5>
             <div class="input-group" style="width: 300px;">
@@ -26,9 +26,9 @@
             </div>
         </div>
     </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+    <div class="card-body p-0" style="min-height: 500px; overflow: visible;">
+        <div class="table-responsive" style="overflow: visible !important;">
+            <table class="table table-hover align-middle mb-0" style="overflow: visible; margin-bottom: 50px;">
                 <thead class="table-light">
                     <tr>
                         <th>ID</th>
@@ -41,10 +41,10 @@
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody style="overflow: visible;">
                     {% if orders %}
                         {% for order in orders %}
-                            <tr>
+                            <tr style="position: relative; z-index: 1;">
                                 <td>#{{ order.id }}</td>
                                 <td>{{ order.customer_name }}</td>
                                 <td>
@@ -55,7 +55,7 @@
                                         {% endif %}
                                     {% endfor %}
                                 </td>
-                                <td>${{ "%.2f"|format(order.total) }}</td>
+                                <td>₹{{ "%.2f"|format(order.total) }}</td>
                                 <td>
                                     {% set employee = staff|selectattr("id", "equalto", order.staff_id)|first %}
                                     {% if employee %}
@@ -71,58 +71,9 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <div class="dropdown">
-                                        <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                            Actions
-                                        </button>
-                                        <ul class="dropdown-menu">
-                                            <!-- Status Update -->
-                                            <li><h6 class="dropdown-header">Update Status</h6></li>
-                                            <li>
-                                                <form action="{{ url_for('update_order_status', id=order.id) }}" method="post" class="px-2">
-                                                    <input type="hidden" name="status" value="Pending">
-                                                    <button type="submit" class="dropdown-item py-2">
-                                                        <span class="badge bg-warning">Pending</span>
-                                                    </button>
-                                                </form>
-                                            </li>
-                                            <li>
-                                                <form action="{{ url_for('update_order_status', id=order.id) }}" method="post" class="px-2">
-                                                    <input type="hidden" name="status" value="In Progress">
-                                                    <button type="submit" class="dropdown-item py-2">
-                                                        <span class="badge bg-info">In Progress</span>
-                                                    </button>
-                                                </form>
-                                            </li>
-                                            <li>
-                                                <form action="{{ url_for('update_order_status', id=order.id) }}" method="post" class="px-2">
-                                                    <input type="hidden" name="status" value="Completed">
-                                                    <button type="submit" class="dropdown-item py-2">
-                                                        <span class="badge bg-success">Completed</span>
-                                                    </button>
-                                                </form>
-                                            </li>
-                                            <li>
-                                                <form action="{{ url_for('update_order_status', id=order.id) }}" method="post" class="px-2">
-                                                    <input type="hidden" name="status" value="Cancelled">
-                                                    <button type="submit" class="dropdown-item py-2">
-                                                        <span class="badge bg-danger">Cancelled</span>
-                                                    </button>
-                                                </form>
-                                            </li>
-                                            <li><hr class="dropdown-divider"></li>
-                                            {% if current_user.role == 'admin' %}
-                                            <li>
-                                                <form action="{{ url_for('remove_order', id=order.id) }}" method="post" class="px-2"
-                                                      onsubmit="return confirm('Are you sure you want to delete this order?');">
-                                                    <button type="submit" class="dropdown-item py-2 text-danger">
-                                                        <i class="fas fa-trash me-2"></i>Delete
-                                                    </button>
-                                                </form>
-                                            </li>
-                                            {% endif %}
-                                        </ul>
-                                    </div>
+                                    <button class="btn btn-sm btn-light" data-bs-toggle="offcanvas" data-bs-target="#orderActionCanvas" onclick="setCurrentOrderId({{ order.id }})">
+                                        Actions
+                                    </button>
                                 </td>
                             </tr>
                         {% endfor %}
@@ -141,13 +92,13 @@
 
 <!-- New Order Modal -->
 <div class="modal fade" id="newOrderModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable" style="max-height: 90vh;">
+        <div class="modal-content" style="max-height: 90vh;">
             <div class="modal-header">
                 <h5 class="modal-title">Create New Order</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body" style="max-height: calc(90vh - 120px); overflow-y: auto;">
                 <form method="POST" action="{{ url_for('orders') }}">
                     {{ form.hidden_tag() }}
                     
@@ -165,7 +116,7 @@
                     
                     <div class="mb-3">
                         <label for="{{ form.menu_items.id }}" class="form-label">Select Items</label>
-                        {{ form.menu_items(class="form-select", size="8", style="height: auto;") }}
+                        {{ form.menu_items(class="form-select", size="12", style="height: auto; min-height: 250px;") }}
                         <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple items</small>
                         {% if form.menu_items.errors %}
                             <div class="text-danger">
@@ -197,10 +148,86 @@
         </div>
     </div>
 </div>
+
+<!-- Order Actions Offcanvas (Right Slide Menu) -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="orderActionCanvas" aria-labelledby="orderActionLabel">
+    <div class="offcanvas-header bg-dark">
+        <h5 class="offcanvas-title" id="orderActionLabel">Order Actions</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body bg-dark">
+        <div id="orderActionsContent">
+            <p class="text-muted">Loading...</p>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+    let currentOrderId = null;
+    const userRole = "{{ current_user.role }}";
+    
+    function setCurrentOrderId(orderId) {
+        currentOrderId = orderId;
+        loadOrderActions(orderId);
+    }
+    
+    function loadOrderActions(orderId) {
+        const content = document.getElementById('orderActionsContent');
+        const baseUrl = "{{ url_for('update_order_status', id=999) }}".replace('999', '');
+        const deleteUrl = "{{ url_for('remove_order', id=999) }}".replace('999', '');
+        
+        let html = '';
+        
+        // Only show status and delete options for admin/manager
+        if (userRole === 'admin' || userRole === 'manager') {
+            html = `
+            <h6 class="mb-3">Update Status</h6>
+            <div class="d-grid gap-2 mb-4">
+                <form action="${baseUrl}${orderId}" method="post" class="w-100">
+                    <input type="hidden" name="status" value="Pending">
+                    <button type="submit" class="btn btn-warning w-100 mb-2">
+                        <i class="fas fa-hourglass-start me-2"></i>Pending
+                    </button>
+                </form>
+                <form action="${baseUrl}${orderId}" method="post" class="w-100">
+                    <input type="hidden" name="status" value="In Progress">
+                    <button type="submit" class="btn btn-info w-100 mb-2">
+                        <i class="fas fa-spinner me-2"></i>In Progress
+                    </button>
+                </form>
+                <form action="${baseUrl}${orderId}" method="post" class="w-100">
+                    <input type="hidden" name="status" value="Completed">
+                    <button type="submit" class="btn btn-success w-100 mb-2">
+                        <i class="fas fa-check-circle me-2"></i>Completed
+                    </button>
+                </form>
+                <form action="${baseUrl}${orderId}" method="post" class="w-100">
+                    <input type="hidden" name="status" value="Cancelled">
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="fas fa-times-circle me-2"></i>Cancelled
+                    </button>
+                </form>
+            </div>
+            
+            <form action="${deleteUrl}${orderId}" method="post" class="w-100" onsubmit="return confirm('Are you sure you want to delete this order?');">
+                <button type="submit" class="btn btn-outline-danger w-100">
+                    <i class="fas fa-trash me-2"></i>Delete Order
+                </button>
+            </form>
+        `;
+        } else {
+            html = `
+                <div class="alert alert-info" role="alert">
+                    <i class="fas fa-info-circle me-2"></i>You don't have permission to modify orders.
+                </div>
+            `;
+        }
+        
+        content.innerHTML = html;
+    }
+    
     // Order search functionality
     document.addEventListener('DOMContentLoaded', function() {
         const searchInput = document.getElementById('orderSearch');

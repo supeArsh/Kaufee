@@ -1,346 +1,426 @@
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
-from werkzeug.security import check_password_hash
 from datetime import datetime
-import pandas as pd
+from functools import wraps
 import random
 
-from main import app, db, login_manager
-from models import User, MenuItem, Staff, Order, OrderItem
-from forms import LoginForm, OrderForm, MenuItemForm, StaffForm
+from models import db, User, MenuItem, Staff, Order, OrderItem, AuditLog
+from forms import LoginForm, OrderForm, MenuItemForm, StaffForm, UserForm
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-
-@app.route('/')
-def index():
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
-    return redirect(url_for('login'))
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    form = LoginForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
-
-        if user and user.check_password(form.password.data):
-            login_user(user)
-            flash('Login successful!', 'success')
-            next_page = request.args.get('next')
-            return redirect(next_page or url_for('dashboard'))
-        else:
-            flash('Invalid username or password', 'danger')
-
-    return render_template('login.html', form=form)
-
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    flash('You have been logged out', 'success')
-    return redirect(url_for('login'))
-
-@app.route('/dashboard')
-@login_required
-def dashboard():
-    # Get summary data for dashboard
-    orders = Order.query.all()
-    menu_items = MenuItem.query.all()
-    staff = Staff.query.all()
-
-    # Calculate metrics
-    total_orders = len(orders)
-    total_sales = sum(order.total for order in orders)
-    active_staff = Staff.query.filter_by(active=True).count()
-
-    # Get sales data for chart
-    daily_sales = get_daily_sales()
-    popular_items = get_popular_items()
-
-    return render_template('dashboard.html', 
-                          total_orders=total_orders,
-                          total_sales=total_sales,
-                          active_staff=active_staff,
-                          daily_sales=daily_sales,
-                          popular_items=popular_items)
-
-@app.route('/orders', methods=['GET', 'POST'])
-@login_required
-def orders():
-    form = OrderForm()
-    menu_items = MenuItem.query.filter_by(available=True).all()
-    staff_members = Staff.query.filter_by(active=True).all()
-
-    form.menu_items.choices = [(item.id, f"{item.name} - ${item.price:.2f}") for item in menu_items]
-    form.staff_id.choices = [(employee.id, employee.name) for employee in staff_members]
-
-    if form.validate_on_submit():
-        # Calculate order total
-        selected_items = MenuItem.query.filter(MenuItem.id.in_(form.menu_items.data)).all()
-        total = sum(item.price for item in selected_items)
-
-        # Create new order
-        new_order = Order(
-            customer_name=form.customer_name.data,
-            staff_id=form.staff_id.data,
-            timestamp=datetime.now(),
-            status='Pending',
-            total=total
-        )
-
-        db.session.add(new_order)
-        db.session.flush()  # Get the order ID
-
-        # Add order items
-        for item_id in form.menu_items.data:
-            order_item = OrderItem(
-                order_id=new_order.id,
-                menu_item_id=item_id,
-                quantity=1  # Default quantity, can be enhanced later
-            )
-            db.session.add(order_item)
-
-        db.session.commit()
-        flash('Order added successfully!', 'success')
-        return redirect(url_for('orders'))
-
-    orders_list = Order.query.order_by(Order.timestamp.desc()).all()
-
-    return render_template('orders.html', 
-                           orders=orders_list, 
-                           menu_items=menu_items, 
-                           staff=staff_members, 
-                           form=form)
-
-@app.route('/orders/update/<int:id>', methods=['POST'])
-@login_required
-def update_order_status(id):
-    new_status = request.form.get('status')
-    if new_status:
-        order = Order.query.get_or_404(id)
-        order.status = new_status
-        db.session.commit()
-        flash('Order status updated', 'success')
-
-    return redirect(url_for('orders'))
-
-@app.route('/orders/delete/<int:id>', methods=['POST'])
-@login_required
-def remove_order(id):
-    if current_user.role != 'admin':
-        flash('You do not have permission to delete orders', 'danger')
-        return redirect(url_for('orders'))
-
-    order = Order.query.get_or_404(id)
-    db.session.delete(order)
-    db.session.commit()
-    flash('Order deleted', 'success')
-    return redirect(url_for('orders'))
-
-@app.route('/menu', methods=['GET', 'POST'])
-@login_required
-def menu():
-    form = MenuItemForm()
-
-    if form.validate_on_submit():
-        if current_user.role != 'manager':
-            flash('You do not have permission to add menu items', 'danger')
-            return redirect(url_for('menu'))
-        new_item = MenuItem(
-            name=form.name.data,
-            description=form.description.data,
-            price=form.price.data,
-            category=form.category.data,
-            available=form.available.data
-        )
-
-        db.session.add(new_item)
-        db.session.commit()
-        flash('Menu item added successfully!', 'success')
-        return redirect(url_for('menu'))
-
-    menu_items = MenuItem.query.all()
-    return render_template('menu.html', menu_items=menu_items, form=form)
-
-@app.route('/menu/update/<int:id>', methods=['POST'])
-@login_required
-def update_menu_item_route(id):
-    if current_user.role not in ['admin', 'manager']:
-        flash('You do not have permission to update menu items', 'danger')
-        return redirect(url_for('menu'))
-
-    try:
-        item = MenuItem.query.get_or_404(id)
-        item.name = request.form['name']
-        item.description = request.form['description']
-        item.price = float(request.form['price'])
-        item.category = request.form['category']
-        item.available = 'available' in request.form
-        
-        db.session.commit()
-        flash('Menu item updated successfully', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash('Error updating menu item', 'danger')
-        print(f"Error: {str(e)}")
+def register_routes(app, login_manager):
+    """Register all routes for the application"""
     
-    return redirect(url_for('menu'))
+    # -------- DECORATORS --------
+    def require_role(*roles):
+        """Decorator to require specific roles"""
+        def decorator(f):
+            @wraps(f)
+            def decorated_function(*args, **kwargs):
+                if not current_user.is_authenticated or current_user.role not in roles:
+                    flash(f"Access denied. Required role: {', '.join(roles)}", "danger")
+                    return redirect(url_for('dashboard'))
+                return f(*args, **kwargs)
+            return decorated_function
+        return decorator
+    
+    def log_action(action, description=""):
+        """Log user action to audit log"""
+        if current_user.is_authenticated:
+            log = AuditLog(user_id=current_user.id, action=action, description=description)
+            db.session.add(log)
+            db.session.commit()
+    
+    # -------- Helper Functions --------
+    def get_daily_sales():
+        return {
+            "dates": ["Mon", "Tue", "Wed", "Thu", "Fri"],
+            "sales": [8500, 9200, 7600, 12500, 11000]
+        }
 
-@app.route('/menu/delete/<int:id>', methods=['POST'])
-@login_required
-def delete_menu_item_route(id):
-    if current_user.role != 'manager':
-        flash('You do not have permission to delete menu items', 'danger')
-        return redirect(url_for('menu'))
+    def get_popular_items():
+        return {
+            "items": ["Espresso", "Latte", "Mocha"],
+            "counts": [42, 30, 25]
+        }
+    
+    # ---------------- LOGIN LOADER ----------------
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.get(int(user_id))
 
-    try:
+    # -------- AUTH ROUTES --------
+    @app.route("/")
+    def index():
+        if current_user.is_authenticated:
+            return redirect(url_for("dashboard"))
+        return redirect(url_for("login"))
+
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        form = LoginForm()
+        if form.validate_on_submit():
+            user = User.query.filter_by(username=form.username.data).first()
+            if user and user.check_password(form.password.data):
+                login_user(user)
+                flash("Login successful!", "success")
+                return redirect(url_for("dashboard"))
+            flash("Invalid username or password", "danger")
+        return render_template("login.html", form=form)
+
+    @app.route("/logout")
+    @login_required
+    def logout():
+        logout_user()
+        flash("Logged out successfully", "success")
+        return redirect(url_for("login"))
+
+    # -------- DASHBOARD --------
+    @app.route("/dashboard")
+    @login_required
+    def dashboard():
+        orders = Order.query.all()
+        total_orders = len(orders)
+        total_sales = sum(order.total for order in orders)
+        active_staff = Staff.query.filter_by(active=True).count()
+
+        daily_sales = get_daily_sales()
+        popular_items = get_popular_items()
+
+        return render_template(
+            "dashboard.html",
+            total_orders=total_orders,
+            total_sales=total_sales,
+            active_staff=active_staff,
+            daily_sales=daily_sales,
+            popular_items=popular_items
+        )
+
+    # -------- ORDERS --------
+    @app.route("/orders", methods=["GET", "POST"])
+    @login_required
+    def orders():
+        form = OrderForm()
+        menu_items = MenuItem.query.filter_by(available=True).all()
+        staff_members = Staff.query.filter_by(active=True).all()
+
+        form.menu_items.choices = [(i.id, f"{i.name} - ₹{i.price}") for i in menu_items]
+        form.staff_id.choices = [(s.id, s.name) for s in staff_members]
+
+        if form.validate_on_submit():
+            selected_items = MenuItem.query.filter(MenuItem.id.in_(form.menu_items.data)).all()
+            total = sum(i.price for i in selected_items)
+
+            order = Order(
+                customer_name=form.customer_name.data,
+                staff_id=form.staff_id.data,
+                timestamp=datetime.now(),
+                status="Pending",
+                total=total
+            )
+
+            db.session.add(order)
+            db.session.flush()
+
+            for item in selected_items:
+                db.session.add(OrderItem(order_id=order.id, menu_item_id=item.id, quantity=1))
+
+            db.session.commit()
+            flash("Order added successfully", "success")
+            return redirect(url_for("orders"))
+
+        orders_list = Order.query.order_by(Order.timestamp.desc()).all()
+        return render_template("orders.html", orders=orders_list, form=form)
+
+    @app.route("/order/update_status/<int:id>", methods=["POST"])
+    @login_required
+    @require_role("admin", "manager")
+    def update_order_status(id):
+        order = Order.query.get_or_404(id)
+        new_status = request.form.get("status")
+        old_status = order.status
+        
+        if new_status in ["Pending", "In Progress", "Completed", "Cancelled"]:
+            order.status = new_status
+            db.session.commit()
+            log_action("UPDATE_ORDER_STATUS", f"Order #{order.id}: {old_status} → {new_status}")
+            flash(f"Order status updated to {new_status}", "success")
+        
+        return redirect(url_for("orders"))
+
+    @app.route("/order/remove/<int:id>", methods=["POST"])
+    @login_required
+    @require_role("admin", "manager")
+    def remove_order(id):
+        order = Order.query.get_or_404(id)
+        order_id = order.id
+        db.session.delete(order)
+        db.session.commit()
+        log_action("DELETE_ORDER", f"Deleted order #{order_id}")
+        flash("Order removed", "success")
+        return redirect(url_for("orders"))
+
+    # -------- MENU --------
+    @app.route("/menu", methods=["GET", "POST"])
+    @login_required
+    def menu():
+        form = MenuItemForm()
+        if form.validate_on_submit():
+            if current_user.role not in ["admin", "manager"]:
+                flash("Access denied", "danger")
+                return redirect(url_for("menu"))
+            
+            item = MenuItem(
+                name=form.name.data,
+                description=form.description.data,
+                price=form.price.data,
+                category=form.category.data,
+                available=form.available.data
+            )
+            db.session.add(item)
+            db.session.commit()
+            log_action("ADD_MENU_ITEM", f"Added menu item: {item.name} - ₹{item.price}")
+            flash("Menu item added", "success")
+            return redirect(url_for("menu"))
+
+        menu_items = MenuItem.query.all()
+        return render_template("menu.html", menu_items=menu_items, form=form)
+
+    @app.route("/menu/delete/<int:id>", methods=["POST"])
+    @login_required
+    @require_role("admin", "manager")
+    def delete_menu_item_route(id):
         item = MenuItem.query.get_or_404(id)
-        # First delete related order items
-        OrderItem.query.filter_by(menu_item_id=id).delete()
+        item_name = item.name
         db.session.delete(item)
         db.session.commit()
-        flash('Menu item deleted', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash('Error deleting menu item. It may be referenced in orders.', 'danger')
-    
-    return redirect(url_for('menu'))
+        log_action("DELETE_MENU_ITEM", f"Deleted menu item: {item_name}")
+        flash("Menu item deleted", "success")
+        return redirect(url_for("menu"))
 
+    @app.route("/menu/update/<int:id>", methods=["POST"])
+    @login_required
+    @require_role("admin", "manager")
+    def update_menu_item_route(id):
+        item = MenuItem.query.get_or_404(id)
+        item.name = request.form.get("name")
+        item.description = request.form.get("description")
+        item.price = float(request.form.get("price"))
+        item.category = request.form.get("category")
+        item.available = request.form.get("available") == "on"
+        
+        db.session.commit()
+        log_action("UPDATE_MENU_ITEM", f"Updated menu item: {item.name}")
+        flash("Menu item updated", "success")
+        return redirect(url_for("menu"))
 
+    @app.route("/menu/edit/<int:id>", methods=["GET", "POST"])
+    @login_required
+    @require_role("admin", "manager")
+    def edit_menu_item(id):
+        item = MenuItem.query.get_or_404(id)
+        
+        if request.method == "POST":
+            item.name = request.form.get("name")
+            item.description = request.form.get("description")
+            item.price = float(request.form.get("price"))
+            item.category = request.form.get("category")
+            item.available = request.form.get("available") == "on"
+            
+            db.session.commit()
+            log_action("UPDATE_MENU_ITEM", f"Updated menu item: {item.name}")
+            flash("Menu item updated successfully", "success")
+            return redirect(url_for("menu"))
+        
+        return render_template("edit_menu_item.html", item=item)
 
-@app.route('/staff', methods=['GET', 'POST'])
-@login_required
-def staff():
-    if current_user.role not in ['admin', 'manager']:
-        flash('You do not have permission to access staff management', 'danger')
-        return redirect(url_for('dashboard'))
-
-    form = StaffForm()
-
-    if form.validate_on_submit():
-        # Generate staff ID if not provided (will use the model's __init__ method)
-        new_staff = Staff(
-            name=form.name.data,
-            position=form.position.data,
-            contact=form.contact.data,
-            staff_id=form.staff_id.data if form.staff_id.data else str(random.randint(100, 999)),
-            active=form.active.data
+    # -------- REPORTS --------
+    @app.route("/reports")
+    @login_required
+    def reports():
+        orders = Order.query.all()
+        total_revenue = sum(order.total for order in orders)
+        total_orders_count = len(orders)
+        
+        # Get orders by status
+        pending_orders = len([o for o in orders if o.status == "Pending"])
+        completed_orders = len([o for o in orders if o.status == "Completed"])
+        
+        # Get top performing staff
+        staff_performance = {}
+        for order in orders:
+            if order.staff_id not in staff_performance:
+                staff_performance[order.staff_id] = {'count': 0, 'total': 0, 'name': ''}
+            staff_performance[order.staff_id]['count'] += 1
+            staff_performance[order.staff_id]['total'] += order.total
+            if order.staff_member:
+                staff_performance[order.staff_id]['name'] = order.staff_member.name
+        
+        # Sort by total sales
+        top_staff = sorted(staff_performance.items(), key=lambda x: x[1]['total'], reverse=True)[:5]
+        
+        # Get most ordered items
+        item_counts = {}
+        for order in orders:
+            for item in order.items:
+                menu_item = item.menu_item
+                if menu_item:
+                    if menu_item.id not in item_counts:
+                        item_counts[menu_item.id] = {'name': menu_item.name, 'count': 0, 'revenue': 0}
+                    item_counts[menu_item.id]['count'] += item.quantity
+                    item_counts[menu_item.id]['revenue'] += menu_item.price * item.quantity
+        
+        most_ordered = sorted(item_counts.items(), key=lambda x: x[1]['count'], reverse=True)[:5]
+        
+        return render_template(
+            "reports.html",
+            total_revenue=total_revenue,
+            total_orders_count=total_orders_count,
+            pending_orders=pending_orders,
+            completed_orders=completed_orders,
+            top_staff=top_staff,
+            most_ordered=most_ordered
         )
 
-        db.session.add(new_staff)
+    # -------- STAFF --------
+    @app.route("/staff", methods=["GET", "POST"])
+    @login_required
+    @require_role("admin", "manager")
+    def staff():
+        form = StaffForm()
+        if form.validate_on_submit():
+            new_staff = Staff(
+                name=form.name.data,
+                position=form.position.data,
+                contact=form.contact.data,
+                staff_id=form.staff_id.data or str(random.randint(100, 999)),
+                active=form.active.data
+            )
+            db.session.add(new_staff)
+            db.session.commit()
+            log_action("ADD_STAFF", f"Added staff member: {new_staff.name}")
+            flash("Staff added", "success")
+            return redirect(url_for("staff"))
+
+        staff_list = Staff.query.all()
+        return render_template("staff.html", staff=staff_list, form=form)
+
+    @app.route("/staff/delete/<int:id>", methods=["POST"])
+    @login_required
+    @require_role("admin", "manager")
+    def delete_staff_route(id):
+        employee = Staff.query.get_or_404(id)
+        emp_name = employee.name
+        db.session.delete(employee)
         db.session.commit()
-        flash('Staff member added successfully!', 'success')
-        return redirect(url_for('staff'))
+        log_action("DELETE_STAFF", f"Deleted staff member: {emp_name}")
+        flash("Staff member deleted", "success")
+        return redirect(url_for("staff"))
 
-    staff_list = Staff.query.all()
-    return render_template('staff.html', staff=staff_list, form=form)
+    @app.route("/staff/update/<int:id>", methods=["POST"])
+    @login_required
+    @require_role("admin", "manager")
+    def update_staff_route(id):
+        employee = Staff.query.get_or_404(id)
+        employee.name = request.form.get("name")
+        employee.position = request.form.get("position")
+        employee.contact = request.form.get("contact")
+        employee.active = request.form.get("active") == "on"
+        
+        db.session.commit()
+        log_action("UPDATE_STAFF", f"Updated staff member: {employee.name}")
+        flash("Staff member updated successfully", "success")
+        return redirect(url_for("staff"))
 
-@app.route('/staff/update/<int:id>', methods=['POST'])
-@login_required
-def update_staff_route(id):
-    if current_user.role != 'admin':
-        flash('You do not have permission to update staff information', 'danger')
-        return redirect(url_for('staff'))
+    @app.route("/staff/edit/<int:id>", methods=["GET", "POST"])
+    @login_required
+    @require_role("admin", "manager")
+    def edit_staff(id):
+        staff = Staff.query.get_or_404(id)
+        
+        if request.method == "POST":
+            staff.name = request.form.get("name")
+            staff.position = request.form.get("position")
+            staff.contact = request.form.get("contact")
+            staff.active = request.form.get("active") == "on"
+            
+            db.session.commit()
+            log_action("UPDATE_STAFF", f"Updated staff member: {staff.name}")
+            flash("Staff member updated successfully", "success")
+            return redirect(url_for("staff"))
+        
+        return render_template("edit_staff.html", staff=staff)
 
-    staff_member = Staff.query.get_or_404(id)
-    staff_member.name = request.form.get('name', staff_member.name)
-    staff_member.position = request.form.get('position', staff_member.position)
-    staff_member.contact = request.form.get('contact', staff_member.contact)
-    staff_member.staff_id = request.form.get('staff_id', staff_member.staff_id)
-    staff_member.active = 'active' in request.form
-
-    db.session.commit()
-    flash('Staff information updated', 'success')
-
-    return redirect(url_for('staff'))
-
-@app.route('/staff/delete/<int:id>', methods=['POST'])
-@login_required
-def delete_staff_route(id):
-    if current_user.role != 'manager':
-        flash('You do not have permission to delete staff records', 'danger')
-        return redirect(url_for('staff'))
-
-    staff_member = Staff.query.get_or_404(id)
-    db.session.delete(staff_member)
-    db.session.commit()
-    flash('Staff record deleted', 'success')
-    return redirect(url_for('staff'))
-
-
-# Helper functions for dashboard chart data (previously in reports section)
-def get_daily_sales():
-    """Generate daily sales data for dashboard"""
-    try:
-        orders = Order.query.all()
-        if not orders:
-            # Return sample data for demonstration with INR values
-            return {
-                'dates': ['2025-04-10', '2025-04-11', '2025-04-12', '2025-04-13', '2025-04-14'],
-                'sales': [8500.00, 9200.50, 7600.75, 12500.25, 11000.00]
-            }
-
-        # Group orders by date and calculate total sales
-        sales_by_date = {}
-        for order in orders:
-            date_str = order.timestamp.strftime('%Y-%m-%d')
-            if date_str in sales_by_date:
-                sales_by_date[date_str] += order.total
+    # -------- USERS (ADMIN ONLY) --------
+    @app.route("/users", methods=["GET", "POST"])
+    @login_required
+    @require_role("admin")
+    def users():
+        form = UserForm()
+        if form.validate_on_submit():
+            if User.query.filter_by(username=form.username.data).first():
+                flash("Username already exists", "danger")
+            elif User.query.filter_by(email=form.email.data).first():
+                flash("Email already exists", "danger")
             else:
-                sales_by_date[date_str] = order.total
+                new_user = User(
+                    username=form.username.data,
+                    email=form.email.data,
+                    role=form.role.data
+                )
+                new_user.set_password(form.password.data)
+                db.session.add(new_user)
+                db.session.commit()
+                log_action("CREATE_USER", f"Created user: {new_user.username} (Role: {new_user.role})")
+                flash(f"User {new_user.username} created successfully", "success")
+                return redirect(url_for("users"))
 
-        # Sort by date
-        sorted_dates = sorted(sales_by_date.keys())
-        sorted_sales = [float(sales_by_date[date]) for date in sorted_dates]
+        users_list = User.query.all()
+        return render_template("users.html", users=users_list, form=form)
 
-        return {
-            'dates': sorted_dates,
-            'sales': sorted_sales
-        }
-    except Exception as e:
-        # If any error occurs, return sample data with INR values
-        print(f"Error in get_daily_sales: {e}")
-        return {
-            'dates': ['2025-04-10', '2025-04-11', '2025-04-12', '2025-04-13', '2025-04-14'],
-            'sales': [8500.00, 9200.50, 7600.75, 12500.25, 11000.00]
-        }
+    @app.route("/users/delete/<int:id>", methods=["POST"])
+    @login_required
+    @require_role("admin")
+    def delete_user_route(id):
+        if id == current_user.id:
+            flash("Cannot delete your own account", "danger")
+            return redirect(url_for("users"))
+        
+        user = User.query.get_or_404(id)
+        username = user.username
+        db.session.delete(user)
+        db.session.commit()
+        log_action("DELETE_USER", f"Deleted user: {username}")
+        flash("User deleted", "success")
+        return redirect(url_for("users"))
 
-def get_popular_items():
-    """Generate popular items data for dashboard"""
-    try:
-        # Check if we have any order items
-        if not OrderItem.query.first():
-            # Return sample data for demonstration
-            return {
-                'items': ['Espresso', 'Cappuccino', 'Latte', 'Mocha', 'Americano'],
-                'counts': [42, 38, 30, 25, 20]
-            }
+    @app.route("/users/update_role/<int:id>", methods=["POST"])
+    @login_required
+    @require_role("admin")
+    def update_user_role(id):
+        if id == current_user.id:
+            flash("Cannot change your own role", "danger")
+            return redirect(url_for("users"))
+        
+        user = User.query.get_or_404(id)
+        new_role = request.form.get("role")
+        
+        if new_role in ["admin", "manager", "staff"]:
+            old_role = user.role
+            user.role = new_role
+            db.session.commit()
+            log_action("UPDATE_USER_ROLE", f"User {user.username}: {old_role} → {new_role}")
+            flash(f"User role updated to {new_role}", "success")
+        else:
+            flash("Invalid role", "danger")
+        
+        return redirect(url_for("users"))
 
-        # Query to get the most popular menu items
-        popular_items_query = db.session.query(
-            MenuItem.name, 
-            db.func.count(OrderItem.id).label('count')
-        ).join(
-            OrderItem, MenuItem.id == OrderItem.menu_item_id
-        ).group_by(
-            MenuItem.name
-        ).order_by(
-            db.desc('count')
-        ).limit(5).all()
-
-        items = [item[0] for item in popular_items_query]
-        counts = [int(item[1]) for item in popular_items_query]
-
-        return {
-            'items': items,
-            'counts': counts
-        }
-    except Exception as e:
-        # If any error occurs, return sample data
-        print(f"Error in get_popular_items: {e}")
-        return {
-            'items': ['Espresso', 'Cappuccino', 'Latte', 'Mocha', 'Americano'],
-            'counts': [42, 38, 30, 25, 20]
-        }
+    # -------- API (FOR CHARTS) --------
+    @app.route("/api/inventory_usage")
+    @login_required
+    def inventory_usage():
+        return jsonify({
+            "items": ["Beans", "Milk", "Syrup"],
+            "levels": [20, 15, 10],
+            "reorder_levels": [10, 10, 5]
+        })

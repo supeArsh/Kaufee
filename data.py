@@ -1,10 +1,7 @@
 from datetime import datetime, timedelta
 import random
-from models import User
-from werkzeug.security import generate_password_hash
 
 # In-memory data storage
-users = []
 menu_items = []
 inventory_items = []
 staff = []
@@ -13,21 +10,10 @@ orders = []
 def initialize_data():
     """Initialize sample data for the application"""
     # Clear existing data
-    users.clear()
     menu_items.clear()
     inventory_items.clear()
     staff.clear()
     orders.clear()
-
-    # Create users (admin, manager, staff)
-    users.append(User(1, 'admin', 'admin@coffeehouse.com', 'admin', 'admin123'))
-    users.append(User(2, 'manager', 'manager@coffeehouse.com', 'manager', 'manager123'))
-    users.append(User(3, 'staff', 'staff@coffeehouse.com', 'staff', 'staff123'))
-
-    # No other sample data is added to comply with guidelines about no mock data
-
-def get_users():
-    return users
 
 def get_menu_items():
     return menu_items
